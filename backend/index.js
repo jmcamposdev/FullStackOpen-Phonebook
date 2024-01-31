@@ -2,8 +2,13 @@ const express = require('express');
 const app = express();
 const morgan = require('morgan');
 const cors = require('cors')
+const path = require('path');  // Añade esta línea
+const config = require('./config.js');
 
 
+
+// This enables the serving of static files
+app.use('/phonebook', express.static('dist'));
 // This enables the parsing of the body of the HTTP request
 app.use(express.json())
 
@@ -35,15 +40,26 @@ let persons = [
     "name": "Mary Poppendieck",
     "number": "39-23-6423122",
     "id": 4
+  },
+  {
+    "name": "Mary Poppendieck",
+    "number": "39-23-6423122",
+    "id": 4
   }
 ]
 
-app.get('/', (request, response) => {
-  // Send HTML
-  response.send('<h1>Hello World!</h1>')
-})
+let router = express.Router();
 
-app.get('/info', (request, response) => {
+// Define routes
+router.get('/', function(req, res) {
+	 // Construye la ruta absoluta al archivo
+   const filePath = path.join(__dirname, 'dist', 'index.html');
+  
+   // Utiliza la ruta absoluta al archivo en sendFile
+   res.sendFile(filePath);
+});
+
+router.get('/info', (request, response) => {
   // Create HTML
   const html = `
     <p>Phonebook has info for ${persons.length} people</p>
@@ -53,12 +69,13 @@ app.get('/info', (request, response) => {
   response.send(html)
 })
 
-app.get('/api/persons', (request, response) => {
+router.get('/api/persons', (request, response) => {
   // Return persons array
   response.json(persons);
 })
 
-app.post('/api/persons', (request, response) => {
+router.post('/api/persons', (request, response) => {
+
   const person = {...request.body, id:generateId()}
   // Validate that person has name and number
   if (!person.name || !person.number) {
@@ -77,7 +94,7 @@ app.post('/api/persons', (request, response) => {
   response.json(person);
 })
 
-app.get('/api/persons/:id', (request, response) => {
+router.get('/api/persons/:id', (request, response) => {
   // Get id from request
   const id = Number(request.params.id);
   // Find person with id
@@ -93,7 +110,7 @@ app.get('/api/persons/:id', (request, response) => {
   }
 })
 
-app.delete('/api/persons/:id', (request, response) => {
+router.delete('/api/persons/:id', (request, response) => {
   // Get id from request
   const id = Number(request.params.id);
   // Filter persons array to remove person with id
@@ -110,6 +127,9 @@ app.listen(PORT, () => {
   // Print message to console when server is started
   console.log(`Server running on port ${PORT}`)
 })
+
+app.use(config.baseUrl, router);
+
 
 /**
  * Generates a random number between 5000 and 10000
