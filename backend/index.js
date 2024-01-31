@@ -1,9 +1,14 @@
+require('dotenv').config()
 const express = require('express');
 const app = express();
 const morgan = require('morgan');
 const cors = require('cors')
-const path = require('path');  // Añade esta línea
+const path = require('path'); 
 const config = require('./config.js');
+
+// Add DB Schemas
+const Person = require('./models/person');
+const { log } = require('console');
 
 
 
@@ -20,44 +25,14 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :b
 // Import cors
 app.use(cors())
 
-
-let persons = [
-  {
-    "name": "Arto Hellas",
-    "number": "040-123456",
-    "id": 1
-  },
-  {
-    "name": "Ada Lovelace",
-    "number": "39-44-5323523",
-    "id": 2
-  },
-  {
-    "name": "Dan Abramov",
-    "number": "12-43-234345",
-    "id": 3
-  },
-  {
-    "name": "Mary Poppendieck",
-    "number": "39-23-6423122",
-    "id": 4
-  },
-  {
-    "name": "Mary Poppendieck",
-    "number": "39-23-6423122",
-    "id": 4
-  }
-]
-
 let router = express.Router();
-
 // Define routes
 router.get('/', function(req, res) {
-	 // Construye la ruta absoluta al archivo
-   const filePath = path.join(__dirname, 'dist', 'index.html');
+	// Construye la ruta absoluta al archivo
+  const filePath = path.join(__dirname, 'dist', 'index.html');
   
-   // Utiliza la ruta absoluta al archivo en sendFile
-   res.sendFile(filePath);
+  // Utiliza la ruta absoluta al archivo en sendFile
+  res.sendFile(filePath);
 });
 
 router.get('/info', (request, response) => {
@@ -71,28 +46,28 @@ router.get('/info', (request, response) => {
 })
 
 router.get('/api/persons', (request, response) => {
-  // Return persons array
-  response.json(persons);
+  // Return all persons
+  Person.find({})
+    .then(allPersons => {
+      response.json(allPersons);
+
+    })
 })
 
 router.post('/api/persons', (request, response) => {
 
-  const person = {...request.body, id:generateId()}
+  const newPerson = new Person({...request.body})
   // Validate that person has name and number
-  if (!person.name || !person.number) {
+  if (!newPerson.name || !newPerson.number) {
     // Return 400 (bad request)
     return response.status(400).json({error:"The person must have name and number"})
   }
-  // Validate that person name is unique
-  const nameExists = persons.find(p => p.name === person.name)
-  if (nameExists) {
-    // Return 400 (bad request)
-    return response.status(400).json({error:"The person name must be unique"})
-  }
-  // Add new person
-  persons.push(person)
-  // Return new person
-  response.json(person);
+  
+  // Add person to DB
+  newPerson.save()
+    .then(result => {
+      response.json(result);
+    })
 })
 
 router.get('/api/persons/:id', (request, response) => {
